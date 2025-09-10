@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>生日蛋糕打地鼠遊戲</title>
+  <title>生日蛋糕砸臉遊戲</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -10,54 +10,77 @@
       background: #fff3e6;
       margin: 0;
       padding: 0;
-      overflow: hidden;
     }
+
     #game {
       position: relative;
-      width: 600px;
-      height: 600px;
+      width: 400px;
+      height: 400px;
       margin: 20px auto;
       background: #ffe;
       border: 2px solid #333;
       border-radius: 12px;
+      overflow: hidden;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
-      gap: 10px;
-      padding: 10px;
     }
+
     .hole {
       position: relative;
-      background: #f2d7b5;
-      border-radius: 50%;
       overflow: hidden;
     }
+
     .face {
       position: absolute;
       width: 100px;
       height: 100px;
-      top: 100%;
+      bottom: -100px;
       left: 50%;
       transform: translateX(-50%);
-      transition: top 0.3s;
-      cursor: pointer;
+      border-radius: 50%;
+      transition: bottom 0.3s;
     }
-    .face.show {
-      top: 20%;
+
+    .face.show { bottom: 0; }
+    .face.normal { background: url('20250910_171236.jpg') center/cover no-repeat; }
+    .face.sad { background: url('sad_face.png') center/cover no-repeat; }
+    .face.trap { background: url('trap.png') center/cover no-repeat; }
+
+    .cream {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: url('cream.png') center/cover no-repeat;
+      pointer-events: none;
     }
-    .normal {
-      background: url('20250910_171236.jpg') center/cover no-repeat;
+
+    .float-text {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff4444;
+      opacity: 1;
+      animation: floatUp 0.8s ease-out forwards;
+      pointer-events: none;
     }
-    .sad {
-      background: url('sad_face.png') center/cover no-repeat;
+    .trap-text { color: #0044ff; }
+
+    @keyframes floatUp {
+      from { transform: translate(-50%, 0); opacity: 1; }
+      to   { transform: translate(-50%, -40px); opacity: 0; }
     }
-    .trap {
-      background: url('trap.png') center/cover no-repeat;
-    }
+
     #score, #timer, #combo {
       font-size: 20px;
-      margin: 10px;
+      margin: 5px;
     }
+
     #startBtn {
       padding: 10px 20px;
       font-size: 18px;
@@ -67,6 +90,7 @@
       background: #ff6b6b;
       color: #fff;
     }
+
     #leaderboard {
       width: 400px;
       margin: 20px auto;
@@ -76,14 +100,11 @@
       border-radius: 8px;
       padding: 10px;
     }
-    #leaderboard h2 {
-      margin: 0 0 10px 0;
-      font-size: 20px;
-    }
-    #leaderboard ol {
-      padding-left: 20px;
-    }
-    /* 跟隨的蛋糕游標 */
+
+    #leaderboard h2 { margin: 0 0 10px 0; font-size: 20px; }
+    #leaderboard ol { padding-left: 20px; }
+
+    /* 🎂 蛋糕游標 */
     #cakeCursor {
       position: absolute;
       width: 60px;
@@ -96,12 +117,11 @@
   </style>
 </head>
 <body>
-  <h1>🎂 生日蛋糕打地鼠 🎂</h1>
+  <h1>🎂 生日蛋糕砸臉遊戲 🎂</h1>
   <div id="score">得分：0</div>
-  <div id="combo">Combo：0</div>
+  <div id="combo">Combo：x0</div>
   <div id="timer">剩餘時間：30</div>
   <button id="startBtn">開始遊戲</button>
-
   <div id="game"></div>
 
   <div id="leaderboard">
@@ -109,12 +129,8 @@
     <ol id="ranking"></ol>
   </div>
 
+  <!-- 蛋糕游標 -->
   <div id="cakeCursor"></div>
-
-  <!-- 音效 -->
-    const throwSound = new Audio('throw.mp3');  // 小寫
-    const hitSound = new Audio('hit.MP3');      // 大寫 MP3
-
 
   <script>
     const game = document.getElementById('game');
@@ -123,88 +139,125 @@
     const comboDisplay = document.getElementById('combo');
     const startBtn = document.getElementById('startBtn');
     const rankingList = document.getElementById('ranking');
-    const cakeCursor = document.getElementById('cakeCursor');
-
-    const throwSound = document.getElementById('throwSound');
-    const hitSound = document.getElementById('hitSound');
-    const trapSound = document.getElementById('trapSound');
 
     let score = 0;
     let combo = 0;
     let timeLeft = 30;
-    let timerInterval;
-    let faceInterval;
+    let timerInterval, faceInterval;
     let playing = false;
+
+    const throwSound = new Audio('throw.mp3');
+    const hitSound = new Audio('hit.mp3');
 
     // 建立 9 個洞
     for (let i = 0; i < 9; i++) {
       const hole = document.createElement('div');
-      hole.classList.add('hole');
+      hole.className = 'hole';
       const face = document.createElement('div');
-      face.classList.add('face', 'normal');
+      face.className = 'face normal';
       hole.appendChild(face);
       game.appendChild(hole);
-
-      // 點擊或觸碰臉
-      face.addEventListener('click', () => hitFace(face));
-      face.addEventListener('touchstart', () => hitFace(face));
     }
 
-    function showRandomFaces() {
-      const faces = document.querySelectorAll('.face');
-      const count = Math.floor(Math.random() * 2) + 1; // 1~2 臉同時出現
-      const randomFaces = [];
+    // 點擊事件（臉）
+    function attachClick(face) {
+      face.onclick = (e) => {
+        if (!playing) return;
+        e.stopPropagation();
 
-      while (randomFaces.length < count) {
-        const rand = faces[Math.floor(Math.random() * faces.length)];
-        if (!randomFaces.includes(rand) && !rand.classList.contains('show')) {
-          randomFaces.push(rand);
-        }
-      }
+        throwSound.currentTime = 0;
+        throwSound.play();
 
-      randomFaces.forEach(face => {
-        // 30% 機率是陷阱
-        if (Math.random() < 0.3) {
-          face.className = 'face trap';
-        } else {
-          face.className = 'face normal';
-        }
-        face.classList.add('show');
+        if (face.classList.contains('show') && !face.classList.contains('sad')) {
+          if (face.classList.contains('normal')) {
+            combo++;
+            const addScore = combo;
+            score += addScore;
+            scoreDisplay.textContent = '得分：' + score;
+            comboDisplay.textContent = "Combo：x" + combo;
 
-        // 收回時間
-        setTimeout(() => {
-          if (face.classList.contains('show') && !face.classList.contains('sad')) {
-            face.classList.remove('show');
-            // ❌ 不強制變 normal，保留當下圖片
+            hitSound.currentTime = 0;
+            hitSound.play();
+
+            face.classList.remove('normal');
+            face.classList.add('sad');
+
+            const cream = document.createElement('div');
+            cream.className = 'cream';
+            face.appendChild(cream);
+
+            const floatText = document.createElement('div');
+            floatText.className = 'float-text';
+            floatText.textContent = `+${addScore} Combo!`;
+            face.appendChild(floatText);
+
+            setTimeout(() => {
+              face.classList.remove('show', 'sad');
+              face.classList.add('normal');
+              cream.remove();
+              floatText.remove();
+            }, 800);
+
+          } else if (face.classList.contains('trap')) {
+            score -= 2;
+            if (score < 0) score = 0;
+            combo = 0;
+            scoreDisplay.textContent = '得分：' + score;
+            comboDisplay.textContent = "Combo：x0";
+
+            const floatText = document.createElement('div');
+            floatText.className = 'float-text trap-text';
+            floatText.textContent = `-2 Oops!`;
+            face.appendChild(floatText);
+
+            setTimeout(() => {
+              face.classList.remove('show', 'trap');
+              face.classList.add('normal');
+              floatText.remove();
+            }, 800);
           }
-        }, 1000);
-      });
+        }
+      };
     }
 
-    function hitFace(face) {
-      if (!playing || !face.classList.contains('show')) return;
+    // 點擊空白 → Combo 歸零
+    document.addEventListener('click', () => {
+      if (!playing) return;
+      combo = 0;
+      comboDisplay.textContent = "Combo：x0";
+    });
 
-      if (face.classList.contains('trap')) {
-        trapSound.play();
-        score -= 2;
-        combo = 0;
-        face.classList.remove('show');
-      } else {
-        hitSound.play();
-        score++;
-        combo++;
-        face.classList.remove('normal');
-        face.classList.add('sad');
-        setTimeout(() => {
-          face.classList.remove('show', 'sad');
-          face.classList.add('normal');
-        }, 500);
+    // 隨機出臉
+    function showRandomFaces(count = 1) {
+      const faces = document.querySelectorAll('.hole .face');
+
+      for (let i = 0; i < count; i++) {
+        const random = Math.floor(Math.random() * faces.length);
+        const face = faces[random];
+        if (!face.classList.contains('show')) {
+          face.classList.remove('sad', 'trap', 'normal');
+
+          const isTrap = Math.random() < 0.2;
+          if (isTrap) {
+            face.classList.add('trap');
+          } else {
+            face.classList.add('normal');
+          }
+
+          face.classList.add('show');
+          attachClick(face);
+
+          setTimeout(() => {
+            if (face.classList.contains('show') && !face.classList.contains('sad')) {
+              face.classList.remove('show', 'trap');
+              face.classList.add('normal');
+            }
+          }, 1000);
+        }
       }
-
-      scoreDisplay.textContent = '得分：' + score;
-      comboDisplay.textContent = 'Combo：' + combo;
     }
 
+    // 開始遊戲
     startBtn.addEventListener('click', () => {
       if (playing) return;
       playing = true;
@@ -212,10 +265,9 @@
       combo = 0;
       timeLeft = 30;
       scoreDisplay.textContent = '得分：0';
-      comboDisplay.textContent = 'Combo：0';
+      comboDisplay.textContent = "Combo：x0";
       timerDisplay.textContent = '剩餘時間：30';
 
-      faceInterval = setInterval(showRandomFaces, 800);
       timerInterval = setInterval(() => {
         timeLeft--;
         timerDisplay.textContent = '剩餘時間：' + timeLeft;
@@ -226,8 +278,14 @@
           saveScore(score);
         }
       }, 1000);
+
+      faceInterval = setInterval(() => {
+        const count = Math.floor(Math.random() * 2) + 1;
+        showRandomFaces(count);
+      }, 800);
     });
 
+    // 排行榜
     function saveScore(finalScore) {
       let name = prompt('遊戲結束！你得了 ' + finalScore + ' 分！\n請輸入你的名字：');
       if (!name) name = '匿名';
@@ -254,11 +312,14 @@
 
     renderLeaderboard();
 
-    // 蛋糕游標跟隨
+    // 🎂 蛋糕游標跟隨
+    const cakeCursor = document.getElementById("cakeCursor");
+
     document.addEventListener("mousemove", (e) => {
       cakeCursor.style.left = e.pageX + "px";
       cakeCursor.style.top = e.pageY + "px";
     });
+
     document.addEventListener("touchmove", (e) => {
       const touch = e.touches[0];
       cakeCursor.style.left = touch.pageX + "px";
@@ -267,4 +328,3 @@
   </script>
 </body>
 </html>
-
