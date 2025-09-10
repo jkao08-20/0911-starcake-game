@@ -7,7 +7,7 @@
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background: #fff3e6;
+      background: url('your-background.jpg') center/cover no-repeat; /* 整頁背景圖 */
       margin: 0;
       padding: 0;
     }
@@ -17,7 +17,7 @@
       width: 360px;
       height: 360px;
       margin: 20px auto;
-      background: #ffe;
+      background: rgba(255, 255, 255, 0.8); /* 半透明底讓遊戲區塊清楚 */
       border: 2px solid #333;
       border-radius: 12px;
       display: grid;
@@ -29,7 +29,7 @@
     .hole {
       position: relative;
       overflow: hidden;
-      background: #fdd; /* 洞的底色（方便看） */
+      background: #fdd;
       border-radius: 50%;
     }
 
@@ -97,7 +97,7 @@
       width: 360px;
       margin: 20px auto;
       text-align: left;
-      background: #fff;
+      background: rgba(255,255,255,0.8);
       border: 2px solid #333;
       border-radius: 8px;
       padding: 10px;
@@ -106,7 +106,6 @@
     #leaderboard h2 { margin: 0 0 10px 0; font-size: 20px; }
     #leaderboard ol { padding-left: 20px; }
 
-    /* 🎂 蛋糕游標 */
     #cakeCursor {
       position: absolute;
       width: 60px;
@@ -131,7 +130,6 @@
     <ol id="ranking"></ol>
   </div>
 
-  <!-- 蛋糕游標 -->
   <div id="cakeCursor"></div>
 
   <script>
@@ -148,14 +146,12 @@
     let timerInterval, faceInterval;
     let playing = false;
 
-    // 🔊 音效 & 背景音樂
     const throwSound = new Audio('throw.mp3');
-    const hitSound = new Audio('hit.Mp3');
+    const hitSound = new Audio('hit.mp3');
     const bgm = new Audio('bgm.mp3');
     bgm.loop = true;
     bgm.volume = 0.5;
 
-    // 建立 9 個洞
     for (let i = 0; i < 9; i++) {
       const hole = document.createElement('div');
       hole.className = 'hole';
@@ -165,12 +161,10 @@
       game.appendChild(hole);
     }
 
-    // 點擊事件（臉）
     function attachClick(face) {
       face.onclick = (e) => {
         if (!playing) return;
         e.stopPropagation();
-
         throwSound.currentTime = 0;
         throwSound.play();
 
@@ -181,10 +175,8 @@
             score += addScore;
             scoreDisplay.textContent = '得分：' + score;
             comboDisplay.textContent = "Combo：x" + combo;
-
             hitSound.currentTime = 0;
             hitSound.play();
-
             face.classList.remove('normal');
             face.classList.add('sad');
 
@@ -226,30 +218,25 @@
       };
     }
 
-    // 點擊空白 → Combo 歸零
     document.addEventListener('click', () => {
       if (!playing) return;
       combo = 0;
       comboDisplay.textContent = "Combo：x0";
     });
 
-    // 隨機出臉
     function showRandomFaces(count = 1) {
       const faces = document.querySelectorAll('.hole .face');
-
       for (let i = 0; i < count; i++) {
         const random = Math.floor(Math.random() * faces.length);
         const face = faces[random];
         if (!face.classList.contains('show')) {
           face.classList.remove('sad', 'trap', 'normal');
-
           const isTrap = Math.random() < 0.2;
           if (isTrap) {
             face.classList.add('trap');
           } else {
             face.classList.add('normal');
           }
-
           face.classList.add('show');
           attachClick(face);
 
@@ -263,7 +250,6 @@
       }
     }
 
-    // 開始遊戲
     startBtn.addEventListener('click', () => {
       if (playing) return;
       playing = true;
@@ -295,17 +281,13 @@
       }, 800);
     });
 
-    // 排行榜
     function saveScore(finalScore) {
       let name = prompt('遊戲結束！你得了 ' + finalScore + ' 分！\n請輸入你的名字：');
       if (!name) name = '匿名';
-
       let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
       leaderboard.push({ name, score: finalScore });
-
       leaderboard.sort((a, b) => b.score - a.score);
       leaderboard = leaderboard.slice(0, 10);
-
       localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
       renderLeaderboard();
     }
@@ -322,9 +304,7 @@
 
     renderLeaderboard();
 
-    // 🎂 蛋糕游標跟隨
     const cakeCursor = document.getElementById("cakeCursor");
-
     document.addEventListener("mousemove", (e) => {
       cakeCursor.style.left = e.pageX + "px";
       cakeCursor.style.top = e.pageY + "px";
@@ -338,4 +318,3 @@
   </script>
 </body>
 </html>
-
