@@ -18,6 +18,8 @@
       border: 2px solid #333;
       border-radius: 12px;
       overflow: hidden;
+      cursor: crosshair;
+      touch-action: none;
     }
     #target {
       position: absolute;
@@ -25,18 +27,16 @@
       height: 120px;
       top: 140px;
       left: 140px;
-      background: url('https://i.imgur.com/oZ5j6VI.png') center/cover no-repeat; /* 壽星照片可以換 */
+      background: url('20250910_171236.jpg') center/cover no-repeat;
       border-radius: 50%;
-      cursor: pointer;
     }
     .cake {
       position: absolute;
       width: 60px;
       height: 60px;
-      background: url('https://i.imgur.com/k6h86pK.png') center/cover no-repeat; /* 蛋糕圖，可以換 */
+      background: url('cake.png') center/cover no-repeat;
       pointer-events: none;
-      transform: translateY(400px);
-      transition: transform 0.6s linear;
+      transition: top 0.6s linear;
     }
     #score, #timer {
       font-size: 20px;
@@ -83,38 +83,92 @@
     <ol id="ranking"></ol>
   </div>
 
+  <!-- 音效 -->
+  <audio id="throwSound" src="throw.mp3" preload="auto"></audio>
+  <audio id="hitSound" src="hit.mp3" preload="auto"></audio>
+
   <script>
+    const game = document.getElementById('game');
     const target = document.getElementById('target');
     const scoreDisplay = document.getElementById('score');
     const timerDisplay = document.getElementById('timer');
     const startBtn = document.getElementById('startBtn');
     const rankingList = document.getElementById('ranking');
 
+    const throwSound = document.getElementById('throwSound');
+    const hitSound = document.getElementById('hitSound');
+
     let score = 0;
     let timeLeft = 10;
-    let timerInterval;
+    let timerInterval, moveInterval;
     let playing = false;
 
-    function spawnCake() {
+    function spawnCake(x) {
       const cake = document.createElement('div');
       cake.className = 'cake';
-      cake.style.left = target.offsetLeft + 30 + 'px';
-      cake.style.top = '400px';
-      document.getElementById('game').appendChild(cake);
+      cake.style.left = (x - 30) + 'px';
+      cake.style.top = '380px';
+      game.appendChild(cake);
+
+      // 播放丟蛋糕音效
+      throwSound.currentTime = 0;
+      throwSound.play();
 
       setTimeout(() => {
-        cake.style.transform = 'translateY(-250px)';
+        cake.style.top = '0px';
+      }, 20);
+
+      // 碰撞檢查
+      let checkHit = setInterval(() => {
+        const cakeRect = cake.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+
+        if (!(cakeRect.bottom < targetRect.top || 
+              cakeRect.top > targetRect.bottom || 
+              cakeRect.right < targetRect.left || 
+              cakeRect.left > targetRect.right)) {
+          score++;
+          scoreDisplay.textContent = '得分：' + score;
+
+          // 播放砸中音效
+          hitSound.currentTime = 0;
+          hitSound.play();
+
+          clearInterval(checkHit);
+          cake.remove();
+        }
       }, 50);
 
-      setTimeout(() => cake.remove(), 1000);
+      setTimeout(() => {
+        clearInterval(checkHit);
+        cake.remove();
+      }, 1200);
     }
 
-    target.addEventListener('click', () => {
+    // 電腦點擊
+    game.addEventListener('click', (e) => {
       if (!playing) return;
-      score++;
-      scoreDisplay.textContent = '得分：' + score;
-      spawnCake();
+      spawnCake(e.offsetX);
     });
+
+    // 手機觸碰
+    game.addEventListener('touchstart', (e) => {
+      if (!playing) return;
+      const rect = game.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      spawnCake(x);
+    });
+
+    // 隨機移動頭像
+    function moveTarget() {
+      const maxX = game.clientWidth - target.clientWidth;
+      const maxY = game.clientHeight - target.clientHeight;
+      const newX = Math.floor(Math.random() * maxX);
+      const newY = Math.floor(Math.random() * maxY);
+      target.style.left = newX + 'px';
+      target.style.top = newY + 'px';
+    }
 
     startBtn.addEventListener('click', () => {
       if (playing) return;
@@ -124,19 +178,24 @@
       scoreDisplay.textContent = '得分：0';
       timerDisplay.textContent = '剩餘時間：10';
 
+      // 倒數計時
       timerInterval = setInterval(() => {
         timeLeft--;
         timerDisplay.textContent = '剩餘時間：' + timeLeft;
         if (timeLeft <= 0) {
           clearInterval(timerInterval);
+          clearInterval(moveInterval);
           playing = false;
           saveScore(score);
         }
       }, 1000);
+
+      // 讓頭像每 1 秒移動一次
+      moveInterval = setInterval(moveTarget, 1000);
     });
 
     function saveScore(finalScore) {
-      let name = prompt('遊戲結束！你砸了 ' + finalScore + ' 個蛋糕！\n請輸入你的名字：');
+      let name = prompt('遊戲結束！你砸中 ' + finalScore + ' 次！\n請輸入你的名字：');
       if (!name) name = '匿名';
 
       let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
