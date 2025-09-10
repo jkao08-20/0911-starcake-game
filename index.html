@@ -1,182 +1,157 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>生日蛋糕砸臉遊戲</title>
+  <title>生日砸蛋糕遊戲 🎂</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       text-align: center;
-      background: #fff3e6;
+      font-family: Arial, sans-serif;
+      background: #ffeedd;
     }
     #game {
       position: relative;
       width: 400px;
       height: 400px;
       margin: 20px auto;
-      background: #ffe;
-      border: 2px solid #333;
-      border-radius: 12px;
+      border: 3px solid #333;
+      border-radius: 15px;
+      background: #fff8f0;
       overflow: hidden;
     }
     #target {
+      width: 200px;
       position: absolute;
-      width: 120px;
-      height: 120px;
-      top: 140px;
-      left: 140px;
-      background: url('https://i.imgur.com/oZ5j6VI.png') center/cover no-repeat; /* 可換壽星照片 */
-      border-radius: 50%;
-      cursor: pointer;
+      bottom: 20px;
+      left: 100px;
+      border-radius: 15px;
     }
     .cake {
       position: absolute;
-      width: 60px;
-      height: 60px;
-      background: url('https://i.imgur.com/k6h86pK.png') center/cover no-repeat; /* 蛋糕圖 */
+      width: 80px;
+      bottom: 0;
+      left: 160px;
+      transition: transform 0.6s ease-out;
       pointer-events: none;
-      transition: all 0.4s ease-out;
-      opacity: 1;
-    }
-    .cake.hit {
-      transform: scale(1.2) rotate(20deg);
-      opacity: 0.8;
     }
     #score, #timer {
-      font-size: 20px;
+      font-size: 22px;
       margin: 10px;
     }
-    #startBtn {
-      padding: 10px 20px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      background: #ff6b6b;
-      color: #fff;
-    }
     #leaderboard {
-      width: 400px;
-      margin: 20px auto;
+      margin-top: 20px;
       text-align: left;
+      width: 400px;
+      margin-left: auto;
+      margin-right: auto;
       background: #fff;
       border: 2px solid #333;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 10px;
-    }
-    #leaderboard h2 {
-      margin: 0 0 10px 0;
-      font-size: 20px;
-    }
-    #leaderboard ol {
-      padding-left: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>🎂 生日蛋糕砸臉遊戲 🎂</h1>
-  <div id="score">得分：0</div>
-  <div id="timer">剩餘時間：10</div>
-  <button id="startBtn">開始遊戲</button>
+  <h1>🎂 砸蛋糕大賽 🎂</h1>
+  <p>點擊壽星，把蛋糕砸過去！</p>
+
   <div id="game">
-    <div id="target"></div>
+    <img id="target" src="birthday_girl.jpg" alt="壽星">
+  </div>
+
+  <div>
+    <span id="score">分數：0</span>
+    <span id="timer">時間：30</span>
   </div>
 
   <div id="leaderboard">
-    <h2>排行榜</h2>
-    <ol id="ranking"></ol>
+    <h3>排行榜 🏆</h3>
+    <ol id="scoresList"></ol>
   </div>
 
   <script>
-    const target = document.getElementById('target');
-    const scoreDisplay = document.getElementById('score');
-    const timerDisplay = document.getElementById('timer');
-    const startBtn = document.getElementById('startBtn');
-    const rankingList = document.getElementById('ranking');
+    const game = document.getElementById("game");
+    const target = document.getElementById("target");
+    const scoreDisplay = document.getElementById("score");
+    const timerDisplay = document.getElementById("timer");
+    const scoresList = document.getElementById("scoresList");
 
     let score = 0;
-    let timeLeft = 10;
-    let timerInterval;
-    let playing = false;
+    let timeLeft = 30;
+    let gameInterval;
 
-    function throwCakeToTarget(x, y) {
-      const cake = document.createElement('div');
-      cake.className = 'cake';
-      const game = document.getElementById('game');
+    // 點擊壽星觸發事件
+    target.addEventListener("click", () => {
+      if (timeLeft <= 0) return;
+      score++;
+      scoreDisplay.textContent = "分數：" + score;
+      launchCake();
+    });
+
+    // 發射蛋糕動畫
+    function launchCake() {
+      const cake = document.createElement("img");
+      cake.src = "cake.png";
+      cake.className = "cake";
       game.appendChild(cake);
 
-      // 起始位置（底部中間）
-      const startX = game.clientWidth / 2 - 30;
-      const startY = game.clientHeight - 60;
-      cake.style.left = startX + 'px';
-      cake.style.top = startY + 'px';
+      // 觸發動畫
+      setTimeout(() => {
+        cake.style.transform = "translateY(-250px)";
+      }, 50);
 
-      // 強制回流讓 transition 生效
-      cake.offsetHeight;
-
-      // 最終位置 → 點擊位置附近
-      cake.style.left = x - 30 + 'px';
-      cake.style.top = y - 30 + 'px';
-      cake.classList.add('hit');
-
-      setTimeout(() => cake.remove(), 600);
+      // 移除動畫元素
+      setTimeout(() => {
+        cake.remove();
+      }, 800);
     }
 
-    target.addEventListener('click', (e) => {
-      if (!playing) return;
-      score++;
-      scoreDisplay.textContent = '得分：' + score;
-      const rect = target.getBoundingClientRect();
-      const gameRect = document.getElementById('game').getBoundingClientRect();
-      const x = e.clientX - gameRect.left;
-      const y = e.clientY - gameRect.top;
-      throwCakeToTarget(x, y);
-    });
-
-    startBtn.addEventListener('click', () => {
-      if (playing) return;
-      playing = true;
+    // 倒數計時
+    function startGame() {
       score = 0;
-      timeLeft = 10;
-      scoreDisplay.textContent = '得分：0';
-      timerDisplay.textContent = '剩餘時間：10';
+      timeLeft = 30;
+      scoreDisplay.textContent = "分數：" + score;
+      timerDisplay.textContent = "時間：" + timeLeft;
 
-      timerInterval = setInterval(() => {
+      gameInterval = setInterval(() => {
         timeLeft--;
-        timerDisplay.textContent = '剩餘時間：' + timeLeft;
+        timerDisplay.textContent = "時間：" + timeLeft;
         if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          playing = false;
-          saveScore(score);
+          clearInterval(gameInterval);
+          endGame();
         }
       }, 1000);
-    });
-
-    function saveScore(finalScore) {
-      let name = prompt('遊戲結束！你砸了 ' + finalScore + ' 個蛋糕！\n請輸入你的名字：');
-      if (!name) name = '匿名';
-
-      let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
-      leaderboard.push({ name, score: finalScore });
-
-      leaderboard.sort((a, b) => b.score - a.score);
-      leaderboard = leaderboard.slice(0, 10); // 保留前 10 名
-
-      localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
-      renderLeaderboard();
     }
 
-    function renderLeaderboard() {
-      let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
-      rankingList.innerHTML = '';
+    // 遊戲結束
+    function endGame() {
+      let name = prompt("時間到！請輸入名字：");
+      if (!name) name = "匿名玩家";
+
+      let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      leaderboard.push({ name, score });
+      leaderboard.sort((a, b) => b.score - a.score);
+      leaderboard = leaderboard.slice(0, 10);
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+      updateLeaderboard();
+      alert(name + " 你的分數是 " + score + " 🎉");
+      startGame(); // 自動重玩
+    }
+
+    // 更新排行榜
+    function updateLeaderboard() {
+      let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      scoresList.innerHTML = "";
       leaderboard.forEach(entry => {
-        const li = document.createElement('li');
-        li.textContent = entry.name + ' - ' + entry.score + ' 分';
-        rankingList.appendChild(li);
+        let li = document.createElement("li");
+        li.textContent = entry.name + " - " + entry.score + "分";
+        scoresList.appendChild(li);
       });
     }
 
-    renderLeaderboard(); // 載入時顯示排行榜
+    updateLeaderboard();
+    startGame();
   </script>
 </body>
 </html>
