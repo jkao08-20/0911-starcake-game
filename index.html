@@ -2,45 +2,43 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>蛋糕打臉版</title>
+  <title>生日蛋糕砸臉遊戲</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background: #fff8e1;
-      overflow: hidden;
-      cursor: none; /* 隱藏系統滑鼠 */
+      background: #fff3e6;
     }
     #game {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 20px auto;
+      background: #ffe;
+      border: 2px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
       display: grid;
-      grid-template-columns: repeat(3, 120px);
-      grid-gap: 20px;
-      justify-content: center;
-      margin-top: 20px;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
     }
     .hole {
-      width: 120px;
-      height: 120px;
-      background: #ccc;
-      border-radius: 50%;
       position: relative;
       overflow: hidden;
     }
     .face {
       position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 100%; /* 一開始藏起來 */
+      width: 100px;
+      height: 100px;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
       border-radius: 50%;
       background: url('20250910_171236.jpg') center/cover no-repeat;
-      transition: top 0.3s;
+      transition: bottom 0.3s;
     }
-    .show {
-      top: 0; /* 冒出來 */
-    }
-    .sad {
-      background: url('sad_face.png') center/cover no-repeat; /* 難過臉 */
-    }
+    .face.show { bottom: 0; }
+    .face.sad { background: url('sad_face.png') center/cover no-repeat; }
     .cream {
       position: absolute;
       width: 100%;
@@ -50,17 +48,30 @@
       background: url('cream.png') center/cover no-repeat;
       pointer-events: none;
     }
-    #cakeCursor {
+
+    /* 浮動文字特效 */
+    .float-text {
       position: absolute;
-      width: 60px;
-      height: 60px;
-      background: url('cake.png') center/cover no-repeat;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff4444;
+      opacity: 1;
+      animation: floatUp 0.8s ease-out forwards;
       pointer-events: none;
-      transform: translate(-50%, -50%);
     }
-    #score, #timer {
+    .trap-text { color: #0044ff; }
+
+    @keyframes floatUp {
+      from { transform: translate(-50%, 0); opacity: 1; }
+      to   { transform: translate(-50%, -40px); opacity: 0; }
+    }
+
+    #score, #timer, #combo {
       font-size: 20px;
-      margin: 10px;
+      margin: 5px;
     }
     #startBtn {
       padding: 10px 20px;
@@ -72,7 +83,7 @@
       color: #fff;
     }
     #leaderboard {
-      width: 300px;
+      width: 400px;
       margin: 20px auto;
       text-align: left;
       background: #fff;
@@ -80,18 +91,14 @@
       border-radius: 8px;
       padding: 10px;
     }
-    #leaderboard h2 {
-      margin: 0 0 10px 0;
-      font-size: 20px;
-    }
-    #leaderboard ol {
-      padding-left: 20px;
-    }
+    #leaderboard h2 { margin: 0 0 10px 0; font-size: 20px; }
+    #leaderboard ol { padding-left: 20px; }
   </style>
 </head>
 <body>
-  <h1>🎂 打蛋糕臉 🎂</h1>
+  <h1>🎂 生日蛋糕砸臉遊戲 🎂</h1>
   <div id="score">得分：0</div>
+  <div id="combo">Combo：x0</div>
   <div id="timer">剩餘時間：30</div>
   <button id="startBtn">開始遊戲</button>
   <div id="game"></div>
@@ -101,30 +108,25 @@
     <ol id="ranking"></ol>
   </div>
 
-  <!-- 跟隨的蛋糕游標 -->
-  <div id="cakeCursor"></div>
-
-  <!-- 音效 -->
-  <audio id="hitSound" src="hit.mp3" preload="auto"></audio>
-  <audio id="throwSound" src="throw.mp3" preload="auto"></audio>
-
   <script>
     const game = document.getElementById('game');
     const scoreDisplay = document.getElementById('score');
     const timerDisplay = document.getElementById('timer');
+    const comboDisplay = document.getElementById('combo');
     const startBtn = document.getElementById('startBtn');
     const rankingList = document.getElementById('ranking');
-    const cakeCursor = document.getElementById('cakeCursor');
-    const hitSound = document.getElementById('hitSound');
-    const throwSound = document.getElementById('throwSound');
 
     let score = 0;
+    let combo = 0;
     let timeLeft = 30;
     let timerInterval, faceInterval;
     let playing = false;
-    let activeFace = null;
 
-    // 建立 9 個洞口
+    // 音效
+    const throwSound = new Audio('throw.mp3');
+    const hitSound = new Audio('hit.mp3');
+
+    // 建立 9 個洞
     for (let i = 0; i < 9; i++) {
       const hole = document.createElement('div');
       hole.className = 'hole';
@@ -132,51 +134,104 @@
       face.className = 'face';
       hole.appendChild(face);
       game.appendChild(hole);
+    }
 
-      // 點擊事件（砸蛋糕）
-      hole.addEventListener('click', () => {
+    // 點擊事件（臉）
+    function attachClick(face, type = "normal") {
+      face.onclick = (e) => {
         if (!playing) return;
+        e.stopPropagation();
+
         throwSound.currentTime = 0;
         throwSound.play();
 
         if (face.classList.contains('show') && !face.classList.contains('sad')) {
-          score++;
-          scoreDisplay.textContent = '得分：' + score;
-          hitSound.currentTime = 0;
-          hitSound.play();
+          if (type === "normal") {
+            combo++;
+            const addScore = combo;
+            score += addScore;
+            scoreDisplay.textContent = '得分：' + score;
+            comboDisplay.textContent = "Combo：x" + combo;
 
-          // 臉變成難過
-          face.classList.add('sad');
+            hitSound.currentTime = 0;
+            hitSound.play();
 
-          // 奶油特效
-          const cream = document.createElement('div');
-          cream.className = 'cream';
-          face.appendChild(cream);
+            face.classList.add('sad');
+            const cream = document.createElement('div');
+            cream.className = 'cream';
+            face.appendChild(cream);
 
-          // 1 秒後縮回去
-          setTimeout(() => {
-            face.classList.remove('show', 'sad');
-            if (cream) cream.remove();
-          }, 800);
+            // 浮動文字
+            const floatText = document.createElement('div');
+            floatText.className = 'float-text';
+            floatText.textContent = `+${addScore} Combo!`;
+            face.appendChild(floatText);
+
+            setTimeout(() => {
+              face.classList.remove('show', 'sad');
+              cream.remove();
+              floatText.remove();
+            }, 800);
+
+          } else if (type === "trap") {
+            score -= 2;
+            if (score < 0) score = 0;
+            combo = 0;
+            scoreDisplay.textContent = '得分：' + score;
+            comboDisplay.textContent = "Combo：x0";
+
+            // 負分浮動文字
+            const floatText = document.createElement('div');
+            floatText.className = 'float-text trap-text';
+            floatText.textContent = `-2 Oops!`;
+            face.appendChild(floatText);
+
+            setTimeout(() => {
+              face.classList.remove('show');
+              floatText.remove();
+            }, 800);
+          }
         }
-      });
+      };
     }
 
-    // 隨機出現臉
-    function showRandomFace() {
+    // 點擊空白 → Combo 歸零
+    document.addEventListener('click', () => {
       if (!playing) return;
-      const holes = document.querySelectorAll('.hole .face');
-      if (activeFace) activeFace.classList.remove('show', 'sad');
-      const random = Math.floor(Math.random() * holes.length);
-      activeFace = holes[random];
-      activeFace.classList.add('show');
+      combo = 0;
+      comboDisplay.textContent = "Combo：x0";
+    });
 
-      // 1 秒後自動縮回去（如果沒被砸）
-      setTimeout(() => {
-        if (activeFace && activeFace.classList.contains('show') && !activeFace.classList.contains('sad')) {
-          activeFace.classList.remove('show');
+    // 隨機出臉
+    function showRandomFaces(count = 1) {
+      const faces = document.querySelectorAll('.hole .face');
+
+      for (let i = 0; i < count; i++) {
+        const random = Math.floor(Math.random() * faces.length);
+        const face = faces[random];
+        if (!face.classList.contains('show')) {
+          face.classList.remove('sad');
+
+          // 20% 機率是陷阱
+          const isTrap = Math.random() < 0.2;
+          if (isTrap) {
+            face.style.background = "url('trap.png') center/cover no-repeat";
+            face.dataset.type = "trap";
+          } else {
+            face.style.background = "url('20250910_171236.jpg') center/cover no-repeat";
+            face.dataset.type = "normal";
+          }
+
+          face.classList.add('show');
+          attachClick(face, face.dataset.type);
+
+          setTimeout(() => {
+            if (face.classList.contains('show') && !face.classList.contains('sad')) {
+              face.classList.remove('show');
+            }
+          }, 1000);
         }
-      }, 1000);
+      }
     }
 
     // 開始遊戲
@@ -184,8 +239,10 @@
       if (playing) return;
       playing = true;
       score = 0;
+      combo = 0;
       timeLeft = 30;
       scoreDisplay.textContent = '得分：0';
+      comboDisplay.textContent = "Combo：x0";
       timerDisplay.textContent = '剩餘時間：30';
 
       timerInterval = setInterval(() => {
@@ -196,16 +253,18 @@
           clearInterval(faceInterval);
           playing = false;
           saveScore(score);
-          alert('遊戲結束！你得到 ' + score + ' 分');
         }
       }, 1000);
 
-      faceInterval = setInterval(showRandomFace, 1200);
+      faceInterval = setInterval(() => {
+        const count = Math.floor(Math.random() * 2) + 1; // 同時出 1~2 個
+        showRandomFaces(count);
+      }, 800);
     });
 
-    // 排行榜儲存
+    // 排行榜
     function saveScore(finalScore) {
-      let name = prompt('遊戲結束！你砸了 ' + finalScore + ' 個蛋糕！\n請輸入你的名字：');
+      let name = prompt('遊戲結束！你得了 ' + finalScore + ' 分！\n請輸入你的名字：');
       if (!name) name = '匿名';
 
       let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
@@ -229,19 +288,6 @@
     }
 
     renderLeaderboard();
-
-    // 蛋糕游標跟隨滑鼠
-    document.addEventListener('mousemove', (e) => {
-      cakeCursor.style.left = e.pageX + 'px';
-      cakeCursor.style.top = e.pageY + 'px';
-    });
-
-    // 手機觸控也支援
-    document.addEventListener('touchmove', (e) => {
-      const touch = e.touches[0];
-      cakeCursor.style.left = touch.pageX + 'px';
-      cakeCursor.style.top = touch.pageY + 'px';
-    });
   </script>
 </body>
 </html>
