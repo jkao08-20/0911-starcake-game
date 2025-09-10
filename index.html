@@ -8,6 +8,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
       background: #fff3e6;
+      cursor: url('cake.png') 32 32, auto; /* 🎂 自訂游標 */
     }
     #game {
       position: relative;
@@ -34,11 +35,13 @@
       left: 50%;
       transform: translateX(-50%);
       border-radius: 50%;
-      background: url('20250910_171236.jpg') center/cover no-repeat;
       transition: bottom 0.3s;
     }
     .face.show { bottom: 0; }
+    .face.normal { background: url('20250910_171236.jpg') center/cover no-repeat; }
     .face.sad { background: url('sad_face.png') center/cover no-repeat; }
+    .face.trap { background: url('trap.png') center/cover no-repeat; }
+
     .cream {
       position: absolute;
       width: 100%;
@@ -49,7 +52,6 @@
       pointer-events: none;
     }
 
-    /* 浮動文字特效 */
     .float-text {
       position: absolute;
       top: -20px;
@@ -122,7 +124,6 @@
     let timerInterval, faceInterval;
     let playing = false;
 
-    // 音效
     const throwSound = new Audio('throw.mp3');
     const hitSound = new Audio('hit.mp3');
 
@@ -131,13 +132,13 @@
       const hole = document.createElement('div');
       hole.className = 'hole';
       const face = document.createElement('div');
-      face.className = 'face';
+      face.className = 'face normal';
       hole.appendChild(face);
       game.appendChild(hole);
     }
 
     // 點擊事件（臉）
-    function attachClick(face, type = "normal") {
+    function attachClick(face) {
       face.onclick = (e) => {
         if (!playing) return;
         e.stopPropagation();
@@ -146,7 +147,7 @@
         throwSound.play();
 
         if (face.classList.contains('show') && !face.classList.contains('sad')) {
-          if (type === "normal") {
+          if (face.classList.contains('normal')) {
             combo++;
             const addScore = combo;
             score += addScore;
@@ -156,12 +157,13 @@
             hitSound.currentTime = 0;
             hitSound.play();
 
+            face.classList.remove('normal');
             face.classList.add('sad');
+
             const cream = document.createElement('div');
             cream.className = 'cream';
             face.appendChild(cream);
 
-            // 浮動文字
             const floatText = document.createElement('div');
             floatText.className = 'float-text';
             floatText.textContent = `+${addScore} Combo!`;
@@ -169,25 +171,26 @@
 
             setTimeout(() => {
               face.classList.remove('show', 'sad');
+              face.classList.add('normal');
               cream.remove();
               floatText.remove();
             }, 800);
 
-          } else if (type === "trap") {
+          } else if (face.classList.contains('trap')) {
             score -= 2;
             if (score < 0) score = 0;
             combo = 0;
             scoreDisplay.textContent = '得分：' + score;
             comboDisplay.textContent = "Combo：x0";
 
-            // 負分浮動文字
             const floatText = document.createElement('div');
             floatText.className = 'float-text trap-text';
             floatText.textContent = `-2 Oops!`;
             face.appendChild(floatText);
 
             setTimeout(() => {
-              face.classList.remove('show');
+              face.classList.remove('show', 'trap');
+              face.classList.add('normal');
               floatText.remove();
             }, 800);
           }
@@ -210,24 +213,22 @@
         const random = Math.floor(Math.random() * faces.length);
         const face = faces[random];
         if (!face.classList.contains('show')) {
-          face.classList.remove('sad');
+          face.classList.remove('sad', 'trap', 'normal');
 
-          // 20% 機率是陷阱
           const isTrap = Math.random() < 0.2;
           if (isTrap) {
-            face.style.background = "url('trap.png') center/cover no-repeat";
-            face.dataset.type = "trap";
+            face.classList.add('trap');
           } else {
-            face.style.background = "url('20250910_171236.jpg') center/cover no-repeat";
-            face.dataset.type = "normal";
+            face.classList.add('normal');
           }
 
           face.classList.add('show');
-          attachClick(face, face.dataset.type);
+          attachClick(face);
 
           setTimeout(() => {
             if (face.classList.contains('show') && !face.classList.contains('sad')) {
-              face.classList.remove('show');
+              face.classList.remove('show', 'trap');
+              face.classList.add('normal');
             }
           }, 1000);
         }
@@ -257,7 +258,7 @@
       }, 1000);
 
       faceInterval = setInterval(() => {
-        const count = Math.floor(Math.random() * 2) + 1; // 同時出 1~2 個
+        const count = Math.floor(Math.random() * 2) + 1;
         showRandomFaces(count);
       }, 800);
     });
