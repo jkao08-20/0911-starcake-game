@@ -14,21 +14,23 @@
 
     #game {
       position: relative;
-      width: 400px;
-      height: 400px;
+      width: 360px;
+      height: 360px;
       margin: 20px auto;
       background: #ffe;
       border: 2px solid #333;
       border-radius: 12px;
-      overflow: hidden;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
+      gap: 4px;
     }
 
     .hole {
       position: relative;
       overflow: hidden;
+      background: #fdd; /* 洞的底色（方便看） */
+      border-radius: 50%;
     }
 
     .face {
@@ -92,7 +94,7 @@
     }
 
     #leaderboard {
-      width: 400px;
+      width: 360px;
       margin: 20px auto;
       text-align: left;
       background: #fff;
@@ -146,8 +148,12 @@
     let timerInterval, faceInterval;
     let playing = false;
 
+    // 🔊 音效 & 背景音樂
     const throwSound = new Audio('throw.mp3');
     const hitSound = new Audio('hit.mp3');
+    const bgm = new Audio('bgm.mp3');
+    bgm.loop = true;
+    bgm.volume = 0.5;
 
     // 建立 9 個洞
     for (let i = 0; i < 9; i++) {
@@ -268,6 +274,9 @@
       comboDisplay.textContent = "Combo：x0";
       timerDisplay.textContent = '剩餘時間：30';
 
+      bgm.currentTime = 0;
+      bgm.play();
+
       timerInterval = setInterval(() => {
         timeLeft--;
         timerDisplay.textContent = '剩餘時間：' + timeLeft;
@@ -275,6 +284,7 @@
           clearInterval(timerInterval);
           clearInterval(faceInterval);
           playing = false;
+          bgm.pause();
           saveScore(score);
         }
       }, 1000);
