@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>生日蛋糕砸臉遊戲</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #fff3e6;
+    }
+    #game {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 20px auto;
+      background: #ffe;
+      border: 2px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #target {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      top: 140px;
+      left: 140px;
+      background: url('https://i.imgur.com/oZ5j6VI.png') center/cover no-repeat; /* 壽星照片可以換 */
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .cake {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: url('https://i.imgur.com/k6h86pK.png') center/cover no-repeat; /* 蛋糕圖，可以換 */
+      pointer-events: none;
+      transform: translateY(400px);
+      transition: transform 0.6s linear;
+    }
+    #score, #timer {
+      font-size: 20px;
+      margin: 10px;
+    }
+    #startBtn {
+      padding: 10px 20px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #ff6b6b;
+      color: #fff;
+    }
+    #leaderboard {
+      width: 400px;
+      margin: 20px auto;
+      text-align: left;
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    #leaderboard h2 {
+      margin: 0 0 10px 0;
+      font-size: 20px;
+    }
+    #leaderboard ol {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎂 生日蛋糕砸臉遊戲 🎂</h1>
+  <div id="score">得分：0</div>
+  <div id="timer">剩餘時間：10</div>
+  <button id="startBtn">開始遊戲</button>
+  <div id="game">
+    <div id="target"></div>
+  </div>
+
+  <div id="leaderboard">
+    <h2>排行榜</h2>
+    <ol id="ranking"></ol>
+  </div>
+
+  <script>
+    const target = document.getElementById('target');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const startBtn = document.getElementById('startBtn');
+    const rankingList = document.getElementById('ranking');
+
+    let score = 0;
+    let timeLeft = 10;
+    let timerInterval;
+    let playing = false;
+
+    function spawnCake() {
+      const cake = document.createElement('div');
+      cake.className = 'cake';
+      cake.style.left = target.offsetLeft + 30 + 'px';
+      cake.style.top = '400px';
+      document.getElementById('game').appendChild(cake);
+
+      setTimeout(() => {
+        cake.style.transform = 'translateY(-250px)';
+      }, 50);
+
+      setTimeout(() => cake.remove(), 1000);
+    }
+
+    target.addEventListener('click', () => {
+      if (!playing) return;
+      score++;
+      scoreDisplay.textContent = '得分：' + score;
+      spawnCake();
+    });
+
+    startBtn.addEventListener('click', () => {
+      if (playing) return;
+      playing = true;
+      score = 0;
+      timeLeft = 10;
+      scoreDisplay.textContent = '得分：0';
+      timerDisplay.textContent = '剩餘時間：10';
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = '剩餘時間：' + timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          playing = false;
+          saveScore(score);
+        }
+      }, 1000);
+    });
+
+    function saveScore(finalScore) {
+      let name = prompt('遊戲結束！你砸了 ' + finalScore + ' 個蛋糕！\n請輸入你的名字：');
+      if (!name) name = '匿名';
+
+      let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+      leaderboard.push({ name, score: finalScore });
+
+      leaderboard.sort((a, b) => b.score - a.score);
+      leaderboard = leaderboard.slice(0, 10);
+
+      localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+      rankingList.innerHTML = '';
+      leaderboard.forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = entry.name + ' - ' + entry.score + ' 分';
+        rankingList.appendChild(li);
+      });
+    }
+
+    renderLeaderboard();
+  </script>
+</body>
+</html>
