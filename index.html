@@ -12,6 +12,15 @@
       padding: 0;
     }
 
+    h1, #score, #combo, #timer, #rules {
+      color: white; /* 白色文字 */
+    }
+
+    #rules {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
     #game {
       position: relative;
       width: 360px;
@@ -119,6 +128,13 @@
 </head>
 <body>
   <h1>🎂 快砸壽星 🎂</h1>
+  <div id="rules">
+    遊戲規則：<br>
+    1. 點擊出現的壽星臉獲得分數<br>
+    2. 連續命中會增加 Combo，分數會更多<br>
+    3. 小心陷阱臉，點擊會扣分並重置 Combo<br>
+    4. 遊戲時間 30 秒，看看你能得多少分！
+  </div>
   <div id="score">得分：0</div>
   <div id="combo">Combo：x0</div>
   <div id="timer">剩餘時間：30</div>
@@ -318,6 +334,3 @@
   </script>
 </body>
 </html>
-
-
-
