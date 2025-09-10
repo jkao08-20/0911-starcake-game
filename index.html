@@ -46,10 +46,10 @@
       top: 20%;
     }
     .normal {
-      background: url('normal.png') center/cover no-repeat;
+      background: url('20250910_171236.jpg') center/cover no-repeat;
     }
     .sad {
-      background: url('sad.png') center/cover no-repeat;
+      background: url('sad_face.png') center/cover no-repeat;
     }
     .trap {
       background: url('trap.png') center/cover no-repeat;
@@ -112,9 +112,9 @@
   <div id="cakeCursor"></div>
 
   <!-- 音效 -->
-  <audio id="throwSound" src="throw.mp3"></audio>
-  <audio id="hitSound" src="hit.mp3"></audio>
-  <audio id="trapSound" src="trap.mp3"></audio>
+    const throwSound = new Audio('throw.mp3');  // 小寫
+    const hitSound = new Audio('hit.MP3');      // 大寫 MP3
+
 
   <script>
     const game = document.getElementById('game');
@@ -267,3 +267,4 @@
   </script>
 </body>
 </html>
+
